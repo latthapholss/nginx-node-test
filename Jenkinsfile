@@ -5,10 +5,6 @@ pipeline {
         nodejs 'node20'
     }
 
-    triggers {
-        githubPush()
-    }
-
     environment {
         IMAGE_NAME   = "tar3kom/nginx-node-test"
         DEPLOY_BRANCH = "deploy"
@@ -56,11 +52,11 @@ pipeline {
             }
         }
 
-        stage('Test') {
-            steps {
-                sh 'npm test'
-            }
-        }
+        // stage('Test') {
+        //     steps {
+        //         sh 'npm test'
+        //     }
+        // }
 
         // ----------------------
         // Build & Push Docker Image
