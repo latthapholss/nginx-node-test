@@ -15,56 +15,54 @@ jobs:
       - name: 1. Checkout Code
         uses: actions/checkout@v4
 
-      - name: 2. Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
-
       # ==========================================
       # STEP 1: Login & Push ไปยัง Harbor UAT
       # ==========================================
-      - name: 3. Login to Harbor UAT
+      - name: 2. Login to Harbor UAT
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.HARBOR_UAT_URL }}
           username: ${{ secrets.HARBOR_UAT_USER }}
           password: ${{ secrets.HARBOR_UAT_SECRET }}
 
-      - name: 4. Build and Push to UAT
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          push: true
-          tags: |
-            ${{ secrets.HARBOR_UAT_URL }}/library/${{ env.APP_NAME }}:${{ env.TAG }}
-            ${{ secrets.HARBOR_UAT_URL }}/library/${{ env.APP_NAME }}:latest
+      - name: 3. Build and Push to UAT
+        run: |
+          UAT_IMG="${{ secrets.HARBOR_UAT_URL }}/library/${{ env.APP_NAME }}:${{ env.TAG }}"
+          UAT_LATEST="${{ secrets.HARBOR_UAT_URL }}/library/${{ env.APP_NAME }}:latest"
+          echo "🔨 กำลัง Build Docker Image..."
+          docker build -t "$UAT_IMG" -t "$UAT_LATEST" .
+          echo "📤 กำลัง Push Image ไปยัง Harbor UAT..."
+          docker push "$UAT_IMG"
+          docker push "$UAT_LATEST"
+          echo "✅ Push เข้า Harbor UAT สำเร็จ!"
 
       # ==========================================
       # STEP 2: Retag & Push ไปยัง Harbor PRD
       # ==========================================
-      - name: 5. Login to Harbor PRD
+      - name: 4. Login to Harbor PRD
         uses: docker/login-action@v3
         with:
           registry: ${{ secrets.HARBOR_PRD_URL }}
           username: ${{ secrets.HARBOR_PRD_USER }}
           password: ${{ secrets.HARBOR_PRD_SECRET }}
 
-      - name: 6. Retag and Push to PRD
+      - name: 5. Retag and Push to PRD
         run: |
           UAT_IMG="${{ secrets.HARBOR_UAT_URL }}/library/${{ env.APP_NAME }}:${{ env.TAG }}"
           PRD_IMG="${{ secrets.HARBOR_PRD_URL }}/library/${{ env.APP_NAME }}:${{ env.TAG }}"
           PRD_LATEST="${{ secrets.HARBOR_PRD_URL }}/library/${{ env.APP_NAME }}:latest"
           echo "📦 กำลังโปรโมต Image จาก UAT ไป PRD..."
-          docker tag $UAT_IMG $PRD_IMG
-          docker tag $UAT_IMG $PRD_LATEST
-          docker push $PRD_IMG
-          docker push $PRD_LATEST
+          docker tag "$UAT_IMG" "$PRD_IMG"
+          docker tag "$UAT_IMG" "$PRD_LATEST"
+          docker push "$PRD_IMG"
+          docker push "$PRD_LATEST"
           echo "✅ Push เข้า Harbor PRD สำเร็จ!"
 
       # ==========================================
       # STEP 3: แจ้งเตือนเมื่อทั้งคู่สำเร็จ
       # ==========================================
-      - name: 7. Notify Success
+      - name: 6. Notify Success
         if: success()
         run: |
           echo "🎉 CI สำเร็จทั้งสองฝั่ง (UAT & PRD) แล้ว!"
           echo "🚀 Image Tag '${{ env.TAG }}' พร้อมนำไป Deploy บน Production ได้ทันที"
-
