@@ -6,8 +6,6 @@
 
 ## 🏗️ Architecture & Pipeline Flow
 
-![End-to-End CI/CD Architecture & Deployment Flow](./docs/architecture-flow.svg)
-
 ```mermaid
 flowchart TD
     %% Source Control

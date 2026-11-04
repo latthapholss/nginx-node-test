@@ -1,8 +1,9 @@
-name: Build and Push to Harbor (UAT & PRD)
+name: "All-in-One: Build, Promote and Deploy (UAT & PRD)"
 
 on:
-  push:
-    branches: [ "main", "master" ]
+  workflow_dispatch:  # เก็บวิธีแรกไว้ สามารถกดรัน Manual ได้ตลอดเวลา
+  # push:
+  #   branches: [ "main", "master" ]
 
 jobs:
   build-and-promote:
@@ -61,39 +62,10 @@ jobs:
           echo "✅ Push เข้า Harbor PRD สำเร็จ!"
 
       # ==========================================
-      # STEP 3: Deploy (ดึง Image จาก Harbor PRD มารัน)
+      # STEP 3: แจ้งเตือนเมื่อทั้งคู่สำเร็จ
       # ==========================================
-      - name: 6. Deploy Application (Pull from Harbor PRD)
-        run: |
-          DEPLOY_IMG="${{ secrets.HARBOR_PRD_URL }}/${{ env.PRD_PROJECT }}/${{ env.APP_NAME }}:${{ env.TAG }}"
-          echo "📥 กำลังดึง Image จาก Harbor PRD: $DEPLOY_IMG ..."
-          docker pull "$DEPLOY_IMG"
-
-          echo "🚀 กำลัง Deploy คอนเทนเนอร์ด้วย Docker..."
-          docker rm -f nginx-node-test-app 2>/dev/null || true
-          docker run -d \
-            --name nginx-node-test-app \
-            -p 3001:3000 \
-            --restart always \
-            "$DEPLOY_IMG"
-
-          echo "⏳ รอให้คอนเทนเนอร์เริ่มต้นทำงาน (3 วินาที)..."
-          sleep 3
-
-          echo "🔍 ตรวจสอบสถานะแอปพลิเคชัน (Health Check)..."
-          if curl -s -I http://localhost:3001 | grep -q "200 OK"; then
-            echo "✅ Deploy สำเร็จสมบูรณ์! แอปพลิเคชันพร้อมใช้งานที่ http://localhost:3001"
-          else
-            echo "⚠️ ตรวจสอบแอปพลิเคชัน..."
-            docker ps -f name=nginx-node-test-app
-            docker logs --tail 20 nginx-node-test-app
-          fi
-
-      # ==========================================
-      # STEP 4: แจ้งเตือนเมื่อทุกขั้นตอนสำเร็จ
-      # ==========================================
-      - name: 7. Notify Success
+      - name: 6. Notify Success
         if: success()
         run: |
-          echo "🎉 CI/CD สำเร็จครบทุกขั้นตอน (UAT, PRD และ Deploy)!"
-          echo "🚀 Image Tag '${{ env.TAG }}' กำลังทำงานอยู่ที่ http://localhost:3001"
+          echo "🎉 CI สำเร็จทั้งสองฝั่ง (UAT & PRD) แล้ว!"
+          echo "🚀 Image Tag '${{ env.TAG }}' พร้อมนำไป Deploy บน Production ได้ทันที"
