@@ -2,7 +2,7 @@ name: "1. CI - Build and Push to Harbor UAT"
 
 on:
   push:
-    branches: [ "main", "master" ]
+    branches: [ "uat" ]  # 👈 ทำงานเมื่อ Push โค้ดเข้า branch uat
 
 jobs:
   build-and-push-uat:

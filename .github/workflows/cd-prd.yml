@@ -2,14 +2,14 @@ name: "2. CD - Promote and Deploy to Harbor PRD"
 
 on:
   workflow_run:
-    workflows: ["1. CI - Build and Push to Harbor UAT"]
+    workflows: ["1. CI - Build and Push to Harbor UAT"]  # 👈 เชื่อมกับชื่อ Pipeline UAT
     types:
       - completed
-    branches: [ "main", "master" ]
+    branches: [ "uat" ]  # 👈 ดักฟังว่าถ้ารอบที่รันบน branch uat สำเร็จ
 
 jobs:
   promote-and-deploy:
-    # ⭐️ ปลุกอัตโนมัติเฉพาะตอนที่ UAT สำเร็จ (Success) เท่านั้น
+    # ⭐️ เงื่อนไขที่ 1: ปลุกอัตโนมัติเฉพาะตอนที่ Pipeline UAT ผ่านฉลุย (success) เท่านั้น
     if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: self-hosted
     env:
@@ -20,7 +20,7 @@ jobs:
 
     steps:
       # ==========================================
-      # STEP 1: Login ทั้ง Harbor UAT และ PRD
+      # STEP 1: Login ทั้งสอง Registry
       # ==========================================
       - name: 1. Login to Harbor UAT
         uses: docker/login-action@v3
@@ -37,15 +37,15 @@ jobs:
           password: ${{ secrets.HARBOR_PRD_SECRET }}
 
       # ==========================================
-      # STEP 2: Retag & Push PRD
+      # STEP 2: Retag & Push ขึ้น Harbor PRD
       # ==========================================
-      - name: 3. Retag and Push to PRD
+      - name: 3. Retag and Push to Harbor PRD
         run: |
           UAT_IMG="${{ secrets.HARBOR_UAT_URL }}/${{ env.UAT_PROJECT }}/${{ env.APP_NAME }}:${{ env.TAG }}"
           PRD_IMG="${{ secrets.HARBOR_PRD_URL }}/${{ env.PRD_PROJECT }}/${{ env.APP_NAME }}:${{ env.TAG }}"
           PRD_LATEST="${{ secrets.HARBOR_PRD_URL }}/${{ env.PRD_PROJECT }}/${{ env.APP_NAME }}:latest"
 
-          echo "📥 ตรวจสอบ Image จาก UAT..."
+          echo "📥 ตรวจสอบ Image จาก Harbor UAT..."
           docker pull "$UAT_IMG" || true
 
           echo "📦 กำลังโปรโมต Image จาก UAT ไป PRD..."
@@ -53,18 +53,18 @@ jobs:
           docker tag "$UAT_IMG" "$PRD_LATEST"
           docker push "$PRD_IMG"
           docker push "$PRD_LATEST"
-          echo "✅ Push เข้า Harbor PRD สำเร็จ!"
+          echo "✅ Push เข้า Harbor PRD สำเร็จเรียบร้อย!"
 
       # ==========================================
-      # STEP 3: Deploy (ดึง Image จาก Harbor PRD มารัน)
+      # STEP 3: Deploy (ทำงานเฉพาะเมื่อ Push PRD สำเร็จเท่านั้น)
       # ==========================================
-      - name: 4. Deploy Application (Pull from Harbor PRD)
+      - name: 4. Deploy Application (Run only if PRD Push Succeeded)
+        if: success()  # ⭐️ เงื่อนไขที่ 2: ต้อง Push เข้า Harbor PRD ผ่านก่อนเท่านั้น ถึงจะสั่ง Deploy
         run: |
           DEPLOY_IMG="${{ secrets.HARBOR_PRD_URL }}/${{ env.PRD_PROJECT }}/${{ env.APP_NAME }}:${{ env.TAG }}"
-          echo "📥 กำลังดึง Image จาก Harbor PRD: $DEPLOY_IMG ..."
+          echo "🚀 ดึง Image จาก Harbor PRD ไป Deploy: $DEPLOY_IMG"
           docker pull "$DEPLOY_IMG"
 
-          echo "🚀 กำลัง Deploy คอนเทนเนอร์ด้วย Docker..."
           docker rm -f nginx-node-test-app 2>/dev/null || true
           docker run -d \
             --name nginx-node-test-app \
@@ -74,13 +74,17 @@ jobs:
 
           sleep 3
           if curl -s -I http://localhost:3001 | grep -q "200 OK"; then
-            echo "✅ Deploy สำเร็จสมบูรณ์! แอปพลิเคชันพร้อมใช้งานที่ http://localhost:3001"
+            echo "✅ Deploy สำเร็จ! เข้าใช้งานได้ที่ http://localhost:3001"
+          else
+            echo "⚠️ ตรวจสอบสถานะแอปพลิเคชัน"
+            exit 1
           fi
 
       # ==========================================
-      # STEP 4: แจ้งเตือนเมื่อสำเร็จ
+      # STEP 4: แจ้งเตือนสถานะสำเร็จ
       # ==========================================
       - name: 5. Notify Success
+        if: success()
         run: |
-          echo "🎉 CI/CD ผ่านฉลุยทั้ง 2 Pipelines (UAT ➔ PRD ➔ Deploy)!"
-          echo "🚀 Image Tag '${{ env.TAG }}' พร้อมใช้งานแล้ว"
+          echo "🎉 ครบ Loop สมบูรณ์: Push UAT สำเร็จ ➔ Auto-Trigger PRD สำเร็จ ➔ Deploy เรียบร้อย!"
+          echo "🚀 Version Tag: ${{ env.TAG }}"
