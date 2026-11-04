@@ -171,33 +171,98 @@ jobs:
           echo "✅ Push เข้า Harbor PRD สำเร็จ!"
 
       # ==========================================
-      # STEP 3: แจ้งเตือนเมื่อทั้งคู่สำเร็จ
+      # STEP 3: Deploy (ดึง Image จาก Harbor PRD มารัน)
       # ==========================================
-      - name: 6. Notify Success
+      - name: 6. Deploy Application (Pull from Harbor PRD)
+        run: |
+          DEPLOY_IMG="${{ secrets.HARBOR_PRD_URL }}/${{ env.PRD_PROJECT }}/${{ env.APP_NAME }}:${{ env.TAG }}"
+          echo "📥 กำลังดึง Image จาก Harbor PRD: $DEPLOY_IMG ..."
+          docker pull "$DEPLOY_IMG"
+
+          echo "🚀 กำลัง Deploy คอนเทนเนอร์ด้วย Docker..."
+          docker rm -f nginx-node-test-app 2>/dev/null || true
+          docker run -d \
+            --name nginx-node-test-app \
+            -p 3001:3000 \
+            --restart always \
+            "$DEPLOY_IMG"
+
+          echo "⏳ รอให้คอนเทนเนอร์เริ่มต้นทำงาน (3 วินาที)..."
+          sleep 3
+
+          echo "🔍 ตรวจสอบสถานะแอปพลิเคชัน (Health Check)..."
+          if curl -s -I http://localhost:3001 | grep -q "200 OK"; then
+            echo "✅ Deploy สำเร็จสมบูรณ์! แอปพลิเคชันพร้อมใช้งานที่ http://localhost:3001"
+          else
+            echo "⚠️ ตรวจสอบแอปพลิเคชัน..."
+            docker ps -f name=nginx-node-test-app
+            docker logs --tail 20 nginx-node-test-app
+          fi
+
+      # ==========================================
+      # STEP 4: แจ้งเตือนเมื่อทุกขั้นตอนสำเร็จ
+      # ==========================================
+      - name: 7. Notify Success
         if: success()
         run: |
-          echo "🎉 CI สำเร็จทั้งสองฝั่ง (UAT & PRD) แล้ว!"
-          echo "🚀 Image Tag '${{ env.TAG }}' พร้อมนำไป Deploy บน Production ได้ทันที"
+          echo "🎉 CI/CD สำเร็จครบทุกขั้นตอน (UAT, PRD และ Deploy)!"
+          echo "🚀 Image Tag '${{ env.TAG }}' กำลังทำงานอยู่ที่ http://localhost:3001"
 ```
 
 ---
 
-## 🚢 4. วิธีดึง Image จาก Harbor ไป Deploy
+## 🚢 4. วิธี Deploy แอปพลิเคชัน (ดึง Image จาก Harbor)
 
-บนเซิร์ฟเวอร์ปลายทาง หรือใน Kubernetes Pod ให้สั่งดึง Image:
+### 🅰️ แบบที่ 1: Deploy ด้วย Docker Run / Docker Compose (บน VM / Server)
 
-### สำหรับ UAT:
+#### คำสั่งดึงและรันด้วย Docker Run:
 ```bash
-echo "Harbor12345" | docker login 10.5.3.56 -u admin --password-stdin
-docker pull 10.5.3.56/uat/nginx-node-test:latest
-docker run -d --name my-app-uat -p 8080:80 10.5.3.56/uat/nginx-node-test:latest
+# ล็อกอินเข้า Harbor PRD
+echo "HarborPrd12345" | docker login 10.5.3.56:8443 -u admin --password-stdin
+
+# ดึง Image ล่าสุดจาก Harbor PRD
+docker pull 10.5.3.56:8443/prd/nginx-node-test:latest
+
+# รันคอนเทนเนอร์
+docker run -d \
+  --name nginx-node-test-app \
+  -p 3001:3000 \
+  --restart always \
+  10.5.3.56:8443/prd/nginx-node-test:latest
 ```
 
-### สำหรับ PRD:
+#### หรือสั่งรันด้วย Docker Compose:
 ```bash
-echo "HarborPrd12345" | docker login 10.5.3.56:8443 -u admin --password-stdin
-docker pull 10.5.3.56:8443/prd/nginx-node-test:latest
-docker run -d --name my-app-prd -p 80:80 10.5.3.56:8443/prd/nginx-node-test:latest
+docker compose pull
+docker compose up -d
+```
+
+---
+
+### 🅱️ แบบที่ 2: Deploy ลง Kubernetes / Rancher
+
+โปรเจกต์มีไฟล์ Manifest เตรียมไว้ในโฟลเดอร์ `k8s/`:
+* `k8s/deployment.yaml`
+* `k8s/service.yaml`
+
+#### 1. สร้าง Secret สำหรับดึง Image จาก Harbor (Private Project):
+```bash
+kubectl create secret docker-registry harbor-registry-secret \
+  --docker-server=10.5.3.56:8443 \
+  --docker-username=admin \
+  --docker-password=HarborPrd12345 \
+  --namespace=default
+```
+
+#### 2. สั่ง Deploy ลง Cluster:
+```bash
+kubectl apply -f k8s/
+```
+
+#### 3. วิธีอัปเดต Image เวอร์ชันใหม่ผ่าน CI หรือ CLI:
+```bash
+kubectl set image deployment/nginx-node-test nginx-node-test=10.5.3.56:8443/prd/nginx-node-test:<NEW_TAG> -n default
+kubectl rollout status deployment/nginx-node-test -n default
 ```
 
 ---

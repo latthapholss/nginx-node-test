@@ -1,0 +1,46 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nginx-node-test
+  namespace: default
+  labels:
+    app: nginx-node-test
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: nginx-node-test
+  template:
+    metadata:
+      labels:
+        app: nginx-node-test
+    spec:
+      # Secret สำหรับดึง Image จาก Harbor (Private Registry)
+      imagePullSecrets:
+        - name: harbor-registry-secret
+      containers:
+        - name: nginx-node-test
+          image: 10.5.3.56/uat/nginx-node-test:latest
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 3000
+              name: http
+          resources:
+            requests:
+              cpu: 100m
+              memory: 128Mi
+            limits:
+              cpu: 500m
+              memory: 512Mi
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 5
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 3000
+            initialDelaySeconds: 10
+            periodSeconds: 15

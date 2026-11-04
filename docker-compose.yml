@@ -2,7 +2,12 @@ version: '3.8'
 
 services:
   web:
-    image: tar3kom/nginx-node-test:${IMAGE_TAG:-latest}  # ใช้ image ที่ build จาก dockerhub
+    # ดึง Image จาก Harbor (รองรับทั้ง UAT และ PRD ผ่านตัวแปร)
+    image: ${HARBOR_URL:-10.5.3.56}/${HARBOR_PROJECT:-uat}/nginx-node-test:${TAG:-latest}
+    container_name: nginx-node-test-app
     ports:
-      - "3000:3000"
+      - "${APP_PORT:-3001}:3000"
     restart: always
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
