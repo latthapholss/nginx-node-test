@@ -10,6 +10,8 @@ jobs:
     env:
       APP_NAME: nginx-node-test
       TAG: ${{ github.sha }}
+      UAT_PROJECT: uat
+      PRD_PROJECT: prd
 
     steps:
       - name: 1. Checkout Code
@@ -27,8 +29,8 @@ jobs:
 
       - name: 3. Build and Push to UAT
         run: |
-          UAT_IMG="${{ secrets.HARBOR_UAT_URL }}/library/${{ env.APP_NAME }}:${{ env.TAG }}"
-          UAT_LATEST="${{ secrets.HARBOR_UAT_URL }}/library/${{ env.APP_NAME }}:latest"
+          UAT_IMG="${{ secrets.HARBOR_UAT_URL }}/${{ env.UAT_PROJECT }}/${{ env.APP_NAME }}:${{ env.TAG }}"
+          UAT_LATEST="${{ secrets.HARBOR_UAT_URL }}/${{ env.UAT_PROJECT }}/${{ env.APP_NAME }}:latest"
           echo "🔨 กำลัง Build Docker Image..."
           docker build -t "$UAT_IMG" -t "$UAT_LATEST" .
           echo "📤 กำลัง Push Image ไปยัง Harbor UAT..."
@@ -48,9 +50,9 @@ jobs:
 
       - name: 5. Retag and Push to PRD
         run: |
-          UAT_IMG="${{ secrets.HARBOR_UAT_URL }}/library/${{ env.APP_NAME }}:${{ env.TAG }}"
-          PRD_IMG="${{ secrets.HARBOR_PRD_URL }}/library/${{ env.APP_NAME }}:${{ env.TAG }}"
-          PRD_LATEST="${{ secrets.HARBOR_PRD_URL }}/library/${{ env.APP_NAME }}:latest"
+          UAT_IMG="${{ secrets.HARBOR_UAT_URL }}/${{ env.UAT_PROJECT }}/${{ env.APP_NAME }}:${{ env.TAG }}"
+          PRD_IMG="${{ secrets.HARBOR_PRD_URL }}/${{ env.PRD_PROJECT }}/${{ env.APP_NAME }}:${{ env.TAG }}"
+          PRD_LATEST="${{ secrets.HARBOR_PRD_URL }}/${{ env.PRD_PROJECT }}/${{ env.APP_NAME }}:latest"
           echo "📦 กำลังโปรโมต Image จาก UAT ไป PRD..."
           docker tag "$UAT_IMG" "$PRD_IMG"
           docker tag "$UAT_IMG" "$PRD_LATEST"
