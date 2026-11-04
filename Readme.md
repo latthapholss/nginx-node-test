@@ -6,6 +6,8 @@
 
 ## 🏗️ Architecture & Pipeline Flow
 
+![End-to-End CI/CD Architecture & Deployment Flow](./docs/architecture-flow.svg)
+
 ```mermaid
 flowchart TD
     %% Source Control
@@ -264,61 +266,6 @@ kubectl apply -f k8s/
 kubectl set image deployment/nginx-node-test nginx-node-test=10.5.3.56:8443/prd/nginx-node-test:<NEW_TAG> -n default
 kubectl rollout status deployment/nginx-node-test -n default
 ```
-
----
-
-### 🅲️ แบบที่ 3: Deploy แบบ GitOps ด้วย Argo CD (มาตรฐาน Enterprise & Production)
-
-ในรูปแบบ **GitOps**, ระบบ CI (GitHub Actions) จะ **ไม่แตะคลัสเตอร์ Kubernetes โดยตรง** แต่จะใช้ **Git เป็น Single Source of Truth** โดยให้ **Argo CD** ที่ติดตั้งอยู่บนคลัสเตอร์ (เช่น Rancher) ทำหน้าที่ Sync สถานะและดึง Image จาก Harbor ไป Deploy อัตโนมัติ
-
-```mermaid
-flowchart LR
-    A["🐙 GitHub Actions<br/>(CI Build & Push Image)"] -->|1. Push Image| B[("🐳 Harbor PRD<br/>(10.5.3.56:8443)")]
-    A -->|2. Update Tag & Git Commit| C["📁 Git Config Repo<br/>(k8s/deployment.yaml)"]
-    D["🐙 Argo CD<br/>(รันใน Kubernetes / Rancher)"] -->|3. Detect Git Change| C
-    D -->|4. Pull Image & Apply| E["☸️ Kubernetes Cluster<br/>(Deploy Pods อัตโนมัติ)"]
-    B -.->|Pull Image| E
-```
-
-#### 1. ไฟล์นิยาม Argo CD Application (`k8s/argocd-app.yaml`):
-```yaml
-apiVersion: argoproj.io/v1alpha1
-kind: Application
-metadata:
-  name: nginx-node-test-app
-  namespace: argocd
-spec:
-  project: default
-  source:
-    repoURL: https://github.com/latthapholss/nginx-node-test.git
-    targetRevision: main
-    path: k8s
-  destination:
-    server: https://kubernetes.default.svc
-    namespace: default
-  syncPolicy:
-    automated:
-      prune: true
-      selfHeal: true
-```
-
-#### 2. วิธีสั่ง Apply Argo CD Application เข้าสู่คลัสเตอร์:
-```bash
-kubectl apply -f k8s/argocd-app.yaml
-```
-
-#### 3. วิธีทำงานร่วมกับ CI/CD (GitHub Actions):
-เมื่อ CI ทำการ Build และ Push Image ขึ้น Harbor PRD เสร็จแล้ว แทนที่จะสั่ง `kubectl` ให้เปลี่ยนเป็นสั่ง **Commit เลข Tag ใหม่ลงใน Git** ดังนี้:
-```yaml
-      - name: Update Image Tag for Argo CD (GitOps)
-        run: |
-          sed -i '' "s|image: .*/nginx-node-test:.*|image: 10.5.3.56:8443/prd/nginx-node-test:${{ env.TAG }}|g" k8s/deployment.yaml
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -am "chore(gitops): update image tag to ${{ env.TAG }}"
-          git push origin main
-```
-เมื่อ Git มี Commit ใหม่ **Argo CD จะตรวจจับและทำการดึง Image ล่าสุดจาก Harbor ไป Deploy ลงคลัสเตอร์ให้อัตโนมัติ** โดยไม่ต้องเปิดพอร์ตหรือให้สิทธิ์ Kubeconfig กับภายนอก คลัสเตอร์จึงปลอดภัยสูงสุดครับ
 
 ---
 
