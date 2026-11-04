@@ -140,8 +140,6 @@ docker run -d --name my-app-prd 10.5.3.56:8443/library/nginx-node-test:latest
 🛠️ 5. ข้อมูลการดูแลระบบ Harbor ในเครื่อง
 
   
-
-  
 Harbor UAT Web UI: https://localhost (Port 443)
 
   
