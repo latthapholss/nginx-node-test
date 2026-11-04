@@ -131,6 +131,7 @@ docker pull 10.5.3.56/library/nginx-node-test:latest
 docker run -d --name my-app-uat 10.5.3.56/library/nginx-node-test:latest
 สำหรับ PRD:
 
+
   
 bash
 echo "HarborPrd12345" | docker login 10.5.3.56:8443 -u admin --password-stdin
