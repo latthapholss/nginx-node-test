@@ -1,0 +1,24 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: nginx-node-test-app
+  namespace: argocd
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    # URL ของ Git Repository ที่เก็บไฟล์ Kubernetes Manifests
+    repoURL: https://github.com/latthapholss/nginx-node-test.git
+    targetRevision: main
+    path: k8s
+  destination:
+    # Cluster ปลายทาง (ในที่นี้คือคลัสเตอร์เดียวกันที่ติดตั้ง Argo CD)
+    server: https://kubernetes.default.svc
+    namespace: default
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
