@@ -44,8 +44,10 @@ jobs:
       # ==========================================
       - name: 4. Retag and Push to Harbor PRD
         run: |
-          # ดึงเวอร์ชันจาก package.json (เช่น 1.0.0 -> v1.0.0)
-          APP_VER="v$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
+          # ดึงเวอร์ชันจาก package.json และตัด 'v' ที่อาจมีติดมาออก เพื่อป้องกัน tag ซ้ำซ้อน (เช่น vv1.0.1)
+          RAW_VER="$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
+          CLEAN_VER="${RAW_VER#v}"
+          APP_VER="v${CLEAN_VER}"
           echo "🏷️ Version Tag: $APP_VER"
 
           UAT_BASE="${{ secrets.HARBOR_UAT_URL }}/${{ env.UAT_PROJECT }}/${{ env.APP_NAME }}"
@@ -74,7 +76,9 @@ jobs:
       - name: 5. Deploy Application (Pull latest & Version Tag from Harbor PRD)
         if: success()  # ⭐️ เงื่อนไขที่ 2: ต้อง Push เข้า Harbor PRD ผ่านก่อนเท่านั้น ถึงจะสั่ง Deploy
         run: |
-          APP_VER="v$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
+          RAW_VER="$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
+          CLEAN_VER="${RAW_VER#v}"
+          APP_VER="v${CLEAN_VER}"
           PRD_BASE="${{ secrets.HARBOR_PRD_URL }}/${{ env.PRD_PROJECT }}/${{ env.APP_NAME }}"
           DEPLOY_IMG="${PRD_BASE}:latest"
           VERSION_IMG="${PRD_BASE}:${APP_VER}"
@@ -104,6 +108,8 @@ jobs:
       - name: 6. Notify Success
         if: success()
         run: |
-          APP_VER="v$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
+          RAW_VER="$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
+          CLEAN_VER="${RAW_VER#v}"
+          APP_VER="v${CLEAN_VER}"
           echo "🎉 ครบ Loop สมบูรณ์: Push UAT ➔ Auto-Trigger PRD ➔ Deploy สำเร็จ!"
           echo "🏷️ Tags บน Harbor: latest และ $APP_VER"

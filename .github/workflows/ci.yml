@@ -30,7 +30,9 @@ jobs:
 
       - name: 3. Build and Push to UAT
         run: |
-          APP_VER="v$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
+          RAW_VER="$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
+          CLEAN_VER="${RAW_VER#v}"
+          APP_VER="v${CLEAN_VER}"
           UAT_BASE="${{ secrets.HARBOR_UAT_URL }}/${{ env.UAT_PROJECT }}/${{ env.APP_NAME }}"
           echo "🔨 กำลัง Build Docker Image (Tags: latest, $APP_VER)..."
           docker build \
@@ -55,7 +57,9 @@ jobs:
 
       - name: 5. Retag and Push to PRD
         run: |
-          APP_VER="v$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
+          RAW_VER="$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
+          CLEAN_VER="${RAW_VER#v}"
+          APP_VER="v${CLEAN_VER}"
           UAT_IMG="${{ secrets.HARBOR_UAT_URL }}/${{ env.UAT_PROJECT }}/${{ env.APP_NAME }}:${{ env.TAG }}"
           PRD_BASE="${{ secrets.HARBOR_PRD_URL }}/${{ env.PRD_PROJECT }}/${{ env.APP_NAME }}"
           echo "📦 กำลังโปรโมต Image จาก UAT ไป PRD (Tags: latest, $APP_VER)..."
