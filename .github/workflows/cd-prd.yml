@@ -5,7 +5,7 @@ on:
     workflows: ["1. CI - Build and Push to Harbor UAT"]  # 👈 เชื่อมกับชื่อ Pipeline UAT
     types:
       - completed
-    branches: [ "uat" ]  # 👈 ดักฟังว่าถ้ารอบที่รันบน branch uat สำเร็จ
+    branches: [ "main", "uat" ]  # 👈 รองรับการดักฟังทั้งรอบที่รันบน main และ uat
 
 jobs:
   promote-and-deploy:
