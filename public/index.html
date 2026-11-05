@@ -1,36 +1,307 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
   <meta charset="UTF-8">
-  <title>Deployed by GitHub Actions & Harbor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Nginx Node App | GitHub Actions & Harbor</title>
   <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #10b981;
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      --card-bg: rgba(255, 255, 255, 0.96);
+      --card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3);
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
     body {
-      font-family: Arial, sans-serif;
-      background-color: #f7f7f7;
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 640px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 24px;
+      padding: 40px 32px;
+      box-shadow: var(--card-shadow);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px);
       text-align: center;
-      padding-top: 100px;
     }
+
+    .badge-status {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      background: #ecfdf5;
+      color: #065f46;
+      font-size: 13px;
+      font-weight: 600;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid #a7f3d0;
+      margin-bottom: 20px;
+    }
+
+    .status-dot {
+      width: 8px;
+      height: 8px;
+      background-color: var(--success);
+      border-radius: 50%;
+      box-shadow: 0 0 0 3px rgba(16, 185, 129, 0.25);
+      animation: pulse 2s infinite;
+    }
+
+    @keyframes pulse {
+      0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.5); }
+      70% { transform: scale(1); box-shadow: 0 0 0 8px rgba(16, 185, 129, 0); }
+      100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+    }
+
     h1 {
-      color: #2c3e50;
+      font-size: 28px;
+      font-weight: 800;
+      color: #0f172a;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
     }
-    p {
-      color: #34495e;
-      font-size: 18px;
+
+    p.subtitle {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 28px;
     }
-    .tag {
-      background-color: #2563eb;
-      color: white;
-      display: inline-block;
-      padding: 6px 18px;
-      border-radius: 20px;
-      font-weight: bold;
-      margin-top: 20px;
+
+    .version-hero {
+      display: inline-flex;
+      align-items: baseline;
+      gap: 8px;
+      background: linear-gradient(135deg, #eff6ff 0%, #dbeafe 100%);
+      border: 1px solid #bfdbfe;
+      padding: 12px 24px;
+      border-radius: 16px;
+      margin-bottom: 28px;
+    }
+
+    .version-hero .label {
+      font-size: 13px;
+      font-weight: 600;
+      color: #1e40af;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .version-hero .val {
+      font-size: 24px;
+      font-weight: 800;
+      color: #1d4ed8;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .grid-info {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 12px;
+      margin-bottom: 28px;
+      text-align: left;
+    }
+
+    @media (max-width: 480px) {
+      .grid-info {
+        grid-template-columns: 1fr;
+      }
+      .card {
+        padding: 28px 20px;
+      }
+    }
+
+    .info-item {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 14px;
+      padding: 14px 16px;
+      transition: all 0.2s ease;
+    }
+
+    .info-item:hover {
+      background: #f1f5f9;
+      border-color: #cbd5e1;
+    }
+
+    .info-title {
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 0.3px;
+      margin-bottom: 4px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .info-value {
+      font-size: 15px;
+      font-weight: 700;
+      color: #1e293b;
+      word-break: break-all;
+    }
+
+    .btn-group {
+      display: flex;
+      gap: 12px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: var(--primary);
+      color: #ffffff;
+      border: 1px solid var(--primary);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+
+    .btn-primary:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+
+    .btn-secondary {
+      background: #ffffff;
+      color: #334155;
+      border: 1px solid var(--border-color);
+    }
+
+    .btn-secondary:hover {
+      background: #f8fafc;
+      border-color: #94a3b8;
+      transform: translateY(-1px);
+    }
+
+    footer {
+      margin-top: 24px;
+      font-size: 12px;
+      color: #94a3b8;
     }
   </style>
 </head>
 <body>
-  <h1>🎉 Deploy สำเร็จแล้ว!</h1>
-  <p>หน้านี้ถูก Deploy โดย GitHub Actions Pipeline & Harbor (UAT & PRD) ครับผม</p>
-  <div class="tag">GitHub Actions & Harbor CI/CD V1.0.4</div>
+  <div class="container">
+    <div class="card">
+      <!-- Status Badge -->
+      <div class="badge-status">
+        <span class="status-dot"></span>
+        <span id="system-status">Deployed & Operational</span>
+      </div>
+
+      <!-- Header Title -->
+      <h1>🚀 Node.js Nginx Reverse Proxy</h1>
+      <p class="subtitle">
+        แอปพลิเคชันถูก Deploy อัตโนมัติด้วย <strong>GitHub Actions CI/CD</strong><br>
+        ผ่านกระบวนการโปรโมตอิมเมจจาก <strong>Harbor UAT</strong> สู่ <strong>Harbor PRD</strong>
+      </p>
+
+      <!-- Version Hero Card (ดึงอัตโนมัติจาก package.json) -->
+      <div class="version-hero">
+        <span class="label">App Version:</span>
+        <span class="val app-version">{{VERSION}}</span>
+      </div>
+
+      <!-- Metadata Grid -->
+      <div class="grid-info">
+        <div class="info-item">
+          <div class="info-title">📦 Package Name</div>
+          <div class="info-value" id="pkg-name">{{APP_NAME}}</div>
+        </div>
+
+        <div class="info-item">
+          <div class="info-title">🏷️ Image Tags</div>
+          <div class="info-value"><span class="app-version">{{VERSION}}</span>, latest</div>
+        </div>
+
+        <div class="info-item">
+          <div class="info-title">⚓ Target Registry</div>
+          <div class="info-value">Harbor PRD (:8443)</div>
+        </div>
+
+        <div class="info-item">
+          <div class="info-title">⏱️ Container Uptime</div>
+          <div class="info-value" id="app-uptime">Checking...</div>
+        </div>
+      </div>
+
+      <!-- Action Buttons -->
+      <div class="btn-group">
+        <a href="/test" class="btn btn-primary">
+          <span>Go to /test Page</span>
+          <span>→</span>
+        </a>
+        <a href="/api/version" target="_blank" class="btn btn-secondary">
+          <span>Inspect API JSON</span>
+        </a>
+      </div>
+
+      <footer>
+        Automated CI/CD Pipeline • Dual-Stage Deployment (UAT ➔ PRD)
+      </footer>
+    </div>
+  </div>
+
+  <script>
+    // Real-time metadata update from /api/version
+    fetch('/api/version')
+      .then(res => res.json())
+      .then(data => {
+        if (data.tag) {
+          document.querySelectorAll('.app-version').forEach(el => el.textContent = data.tag);
+        }
+        if (data.name) {
+          document.getElementById('pkg-name').textContent = data.name;
+        }
+        if (typeof data.uptime === 'number') {
+          const minutes = Math.floor(data.uptime / 60);
+          const seconds = data.uptime % 60;
+          document.getElementById('app-uptime').textContent = 
+            minutes > 0 ? `${minutes}m ${seconds}s` : `${seconds}s`;
+        }
+      })
+      .catch(err => {
+        console.warn('API sync warning:', err);
+      });
+  </script>
 </body>
 </html>

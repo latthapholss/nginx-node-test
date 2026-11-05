@@ -1,27 +1,183 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="th">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Node.js Nginx Reverse Proxy</title>
-    <style>
-        body {
-            font-family: Arial, sans-serif;
-            text-align: center;
-            padding: 50px;
-            background-color: #f4f4f4;
-        }
-        h1 {
-            color: #333;
-        }
-        p {
-            font-size: 1.2em;
-            color: #666;
-        }
-    </style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Test Page | Nginx Node App</title>
+  <style>
+    :root {
+      --primary: #2563eb;
+      --primary-hover: #1d4ed8;
+      --success: #10b981;
+      --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e293b 50%, #0f172a 100%);
+      --card-bg: rgba(255, 255, 255, 0.96);
+      --card-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.3);
+      --text-main: #0f172a;
+      --text-muted: #64748b;
+      --border-color: #e2e8f0;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+      min-height: 100vh;
+      background: var(--bg-gradient);
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px 16px;
+    }
+
+    .container {
+      width: 100%;
+      max-width: 580px;
+    }
+
+    .card {
+      background: var(--card-bg);
+      border-radius: 24px;
+      padding: 40px 32px;
+      box-shadow: var(--card-shadow);
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      backdrop-filter: blur(12px);
+      text-align: center;
+    }
+
+    .badge-route {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #eff6ff;
+      color: #1e40af;
+      font-size: 13px;
+      font-weight: 700;
+      padding: 6px 14px;
+      border-radius: 9999px;
+      border: 1px solid #bfdbfe;
+      margin-bottom: 20px;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    h1 {
+      font-size: 26px;
+      font-weight: 800;
+      color: #0f172a;
+      margin-bottom: 12px;
+    }
+
+    p.desc {
+      color: var(--text-muted);
+      font-size: 15px;
+      line-height: 1.6;
+      margin-bottom: 24px;
+    }
+
+    .health-box {
+      background: #f8fafc;
+      border: 1px solid var(--border-color);
+      border-radius: 16px;
+      padding: 20px;
+      margin-bottom: 28px;
+      text-align: left;
+    }
+
+    .health-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 0;
+      border-bottom: 1px dashed #e2e8f0;
+      font-size: 14px;
+    }
+
+    .health-row:last-child {
+      border-bottom: none;
+      padding-bottom: 0;
+    }
+
+    .health-label {
+      color: var(--text-muted);
+      font-weight: 600;
+    }
+
+    .health-val {
+      font-weight: 700;
+      color: #1e293b;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 10px 24px;
+      border-radius: 12px;
+      font-size: 14px;
+      font-weight: 600;
+      text-decoration: none;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      background: var(--primary);
+      color: #ffffff;
+      border: 1px solid var(--primary);
+      box-shadow: 0 4px 12px rgba(37, 99, 235, 0.25);
+    }
+
+    .btn:hover {
+      background: var(--primary-hover);
+      transform: translateY(-1px);
+    }
+  </style>
 </head>
 <body>
-    <h1>Hello from Test Page!</h1>
-    <p>Deployed with GitHub Actions & Harbor !</p>
+  <div class="container">
+    <div class="card">
+      <div class="badge-route">GET /test</div>
+      <h1>🧪 Route Verification Passed</h1>
+      <p class="desc">
+        เส้นทาง <code>/test</code> ทำงานได้สมบูรณ์ และเชื่อมต่อกับ Nginx Reverse Proxy ถูกต้อง
+      </p>
+
+      <div class="health-box">
+        <div class="health-row">
+          <span class="health-label">HTTP Status</span>
+          <span class="health-val" style="color: #10b981;">200 OK</span>
+        </div>
+        <div class="health-row">
+          <span class="health-label">Application Version</span>
+          <span class="health-val app-version">{{VERSION}}</span>
+        </div>
+        <div class="health-row">
+          <span class="health-label">Deployment Architecture</span>
+          <span class="health-val">GitHub Actions + Harbor</span>
+        </div>
+        <div class="health-row">
+          <span class="health-label">Response Time</span>
+          <span class="health-val">&lt; 2ms</span>
+        </div>
+      </div>
+
+      <a href="/" class="btn">
+        <span>← Back to Dashboard</span>
+      </a>
+    </div>
+  </div>
+
+  <script>
+    fetch('/api/version')
+      .then(res => res.json())
+      .then(data => {
+        if (data.tag) {
+          document.querySelectorAll('.app-version').forEach(el => el.textContent = data.tag);
+        }
+      })
+      .catch(console.warn);
+  </script>
 </body>
 </html>
