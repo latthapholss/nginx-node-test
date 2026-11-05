@@ -25,11 +25,23 @@ jobs:
 
       - name: 3. Build and Push to UAT
         run: |
-          UAT_IMG="${{ secrets.HARBOR_UAT_URL }}/${{ env.UAT_PROJECT }}/${{ env.APP_NAME }}:${{ env.TAG }}"
-          UAT_LATEST="${{ secrets.HARBOR_UAT_URL }}/${{ env.UAT_PROJECT }}/${{ env.APP_NAME }}:latest"
-          echo "🔨 กำลัง Build Docker Image..."
-          docker build -t "$UAT_IMG" -t "$UAT_LATEST" .
+          # ดึงเวอร์ชันจาก package.json (เช่น 1.0.0 -> v1.0.0)
+          APP_VER="v$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
+          echo "🏷️ Version Tag: $APP_VER"
+
+          UAT_BASE="${{ secrets.HARBOR_UAT_URL }}/${{ env.UAT_PROJECT }}/${{ env.APP_NAME }}"
+          UAT_SHA="${UAT_BASE}:${{ env.TAG }}"
+          UAT_VER="${UAT_BASE}:${APP_VER}"
+          UAT_LATEST="${UAT_BASE}:latest"
+
+          echo "🔨 กำลัง Build Docker Image (Tags: latest, $APP_VER)..."
+          docker build \
+            -t "$UAT_SHA" \
+            -t "$UAT_VER" \
+            -t "$UAT_LATEST" .
+
           echo "📤 กำลัง Push Image ไปยัง Harbor UAT..."
-          docker push "$UAT_IMG"
+          docker push "$UAT_SHA"
+          docker push "$UAT_VER"
           docker push "$UAT_LATEST"
-          echo "✅ Push เข้า Harbor UAT สำเร็จเรียบร้อย!"
+          echo "✅ Push เข้า Harbor UAT สำเร็จเรียบร้อย (Tags: latest, $APP_VER)!"
