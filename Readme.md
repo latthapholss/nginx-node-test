@@ -276,4 +276,3 @@ kubectl rollout status deployment/nginx-node-test -n default
   cd ~/Desktop/actions-runner && ./run.sh
   ```
 
-!!
