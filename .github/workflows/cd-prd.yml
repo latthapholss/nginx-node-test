@@ -1,20 +1,17 @@
 name: "2. CD - Promote and Deploy to Harbor PRD"
 
+# ⚠️ ปิดการ Trigger อัตโนมัติ (Disabled Auto-Trigger)
+# ใช้ Harbor Replication ซิงค์ข้าม Registry และ Keel Auto-Deploy แทน
+# คงเหลือเฉพาะ manual trigger (workflow_dispatch) ไว้เผื่อรันด้วยมือ
 on:
-  workflow_run:
-    workflows: ["1. CI - Build and Push to Harbor UAT"]  # 👈 เชื่อมกับชื่อ Pipeline UAT
-    types:
-      - completed
-    branches: [ "main", "uat" ]  # 👈 รองรับการดักฟังทั้งรอบที่รันบน main และ uat
+  workflow_dispatch:
 
 jobs:
   promote-and-deploy:
-    # ⭐️ เงื่อนไขที่ 1: ปลุกอัตโนมัติเฉพาะตอนที่ Pipeline UAT ผ่านฉลุย (success) เท่านั้น
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     runs-on: self-hosted
     env:
       APP_NAME: nginx-node-test
-      TAG: ${{ github.event.workflow_run.head_sha }}
+      TAG: ${{ github.event.workflow_run.head_sha || github.sha }}
       UAT_PROJECT: uat
       PRD_PROJECT: prd
 
@@ -22,7 +19,7 @@ jobs:
       - name: 1. Checkout Code
         uses: actions/checkout@v4
         with:
-          ref: ${{ github.event.workflow_run.head_sha }}  # 👈 ดึงโค้ดจาก Commit/Branch ที่เพิ่งรัน UAT
+          ref: ${{ github.event.workflow_run.head_sha || github.ref }}
 
       # ==========================================
       # STEP 1: Login ทั้งสอง Registry
