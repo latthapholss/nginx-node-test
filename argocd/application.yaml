@@ -19,8 +19,8 @@ metadata:
 spec:
   project: default
   source:
-    # Git Repository ที่เก็บไฟล์ Kubernetes Manifests (GitOps Source of Truth)
-    repoURL: https://github.com/latthapholss/nginx-node-test.git
+    # Git Repository ที่เก็บไฟล์ Kubernetes Manifests (เชื่อมต่อผ่าน SSH Deploy Key)
+    repoURL: git@github.com:latthapholss/nginx-node-test.git
     targetRevision: main
     path: k8s
   destination:
