@@ -10,17 +10,15 @@ metadata:
     argocd-image-updater.argoproj.io/app.update-strategy: semver
     # อนุญาตเฉพาะ Tag รูปแบบ SemVer ที่ขึ้นต้นด้วย v เช่น v1.0.7
     argocd-image-updater.argoproj.io/app.allow-tags: regexp:^v[0-9]+\.[0-9]+\.[0-9]+$
-    # เขียน Commit & Push เวอร์ชันใหม่กลับเข้า Git อัตโนมัติ (GitOps แท้)
-    argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
-    argocd-image-updater.argoproj.io/git-branch: main
-    argocd-image-updater.argoproj.io/write-back-target: kustomization
+    # อัปเดตตรงเข้า Argo CD Application ทันที (ไม่ต้องใช้ PAT หรือ SSH Key เขียนกลับ Git)
+    argocd-image-updater.argoproj.io/write-back-method: argocd
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:
   project: default
   source:
-    # Git Repository ที่เก็บไฟล์ Kubernetes Manifests (เชื่อมต่อผ่าน SSH Deploy Key)
-    repoURL: git@github.com:latthapholss/nginx-node-test.git
+    # Git Repository ที่เก็บไฟล์ Kubernetes Manifests (อ่านแบบ Read-Only ผ่าน HTTPS)
+    repoURL: https://github.com/latthapholss/nginx-node-test.git
     targetRevision: main
     path: k8s
   destination:
