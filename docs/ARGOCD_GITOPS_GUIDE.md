@@ -176,7 +176,7 @@ kubectl rollout restart deployment/argocd-image-updater -n argocd
 
 ---
 
-### ขั้นตอนที่ 5: สร้าง Secret สำหรับ Write-Back กลับเข้า GitHub และลงทะเบียน Application
+### ขั้นตอนที่ 5: สร้าง ImagePullSecret และลงทะเบียน Application (ไม่ต้องใช้ GitHub PAT/SSH Key)
 ```bash
 # 1. สร้าง ImagePullSecret ใน namespace default (สำหรับดึง Image จาก Harbor PRD)
 kubectl create secret docker-registry harbor-prd-secret \
@@ -185,17 +185,11 @@ kubectl create secret docker-registry harbor-prd-secret \
   --docker-password='ybXtqTtJmcNjMnVFIPJvFmuCnAmGhP7s' \
   --namespace=default
 
-# 2. สร้าง Secret GitHub Token (PAT ที่มีสิทธิ์ repo) ใน namespace argocd
-kubectl create secret generic git-creds \
-  --from-literal=username=latthapholss \
-  --from-literal=password=<GITHUB_PAT> \
-  -n argocd
-
-# 3. ลงทะเบียน Argo CD Application จากไฟล์ในโปรเจกต์
+# 2. ลงทะเบียน Argo CD Application จากไฟล์ในโปรเจกต์ (ใช้ write-back-method: argocd)
 kubectl apply -f argocd/application.yaml
 ```
 
-*(หมายเหตุ: หากก่อนหน้านี้เคยติดตั้ง Keel ไว้ ให้ถอดออกด้วยคำสั่ง `kubectl delete namespace keel` เพื่อไม่ให้ชนกับ Argo CD)*
+*(หมายเหตุ: ใช้ `write-back-method: argocd` จึงไม่ต้องสร้าง `git-creds` PAT หรือ SSH Deploy Key แต่อย่างใด Argo CD Image Updater จะสั่งอัปเดต Image Tag ตรงเข้า Argo CD Application ให้ทันที และหากเคยติดตั้ง Keel ไว้ ให้ถอดออกด้วย `kubectl delete namespace keel`)*
 
 ---
 
