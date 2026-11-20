@@ -3,6 +3,17 @@ kind: Application
 metadata:
   name: nginx-node-test-prd
   namespace: argocd
+  annotations:
+    # เฝ้าดู Image บน Harbor PRD ที่ต้องการให้ Argo CD Image Updater ตรวจจับ
+    argocd-image-updater.argoproj.io/image-list: app=10.5.3.56:8443/prd/nginx-node-test
+    # กลยุทธ์ semver (เทียบเท่า keel.sh/policy: all) อัปเดตเมื่อมีเวอร์ชันใหม่กว่า เช่น v1.0.7 > v1.0.5
+    argocd-image-updater.argoproj.io/app.update-strategy: semver
+    # อนุญาตเฉพาะ Tag รูปแบบ SemVer ที่ขึ้นต้นด้วย v เช่น v1.0.7
+    argocd-image-updater.argoproj.io/app.allow-tags: regexp:^v[0-9]+\.[0-9]+\.[0-9]+$
+    # เขียน Commit & Push เวอร์ชันใหม่กลับเข้า Git อัตโนมัติ (GitOps แท้)
+    argocd-image-updater.argoproj.io/write-back-method: git:secret:argocd/git-creds
+    argocd-image-updater.argoproj.io/git-branch: main
+    argocd-image-updater.argoproj.io/write-back-target: kustomization
   finalizers:
     - resources-finalizer.argocd.argoproj.io
 spec:

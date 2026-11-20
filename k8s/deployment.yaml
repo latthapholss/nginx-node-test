@@ -15,12 +15,12 @@ spec:
       labels:
         app: nginx-node-test
     spec:
-      # Secret สำหรับดึง Image จาก Harbor (Private Registry)
+      # Secret สำหรับดึง Image จาก Harbor PRD (Private Registry)
       imagePullSecrets:
-        - name: harbor-registry-secret
+        - name: harbor-prd-secret
       containers:
         - name: nginx-node-test
-          # ดึง Image จาก Harbor PRD (Tag จะถูกอัปเดตอัตโนมัติโดย GitHub Actions เพื่อให้ Argo CD สั่ง Sync)
+          # ดึง Image จาก Harbor PRD (Tag ถูกจัดการผ่าน k8s/kustomization.yaml โดย Argo CD Image Updater)
           image: 10.5.3.56:8443/prd/nginx-node-test:v1.0.7
           imagePullPolicy: IfNotPresent
           ports:
