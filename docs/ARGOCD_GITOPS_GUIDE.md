@@ -228,6 +228,54 @@ EOF
 kubectl rollout restart deployment/argocd-image-updater -n argocd
 ```
 
+#### 💡 ท่าเสริม: ใช้ `docker-registry` Secret (`pullsecret:`) แทนการสร้าง `harbor-prd-cred` แยก
+หากมี ImagePullSecret (`kubernetes.io/dockerconfigjson`) เช่น `harbor-prd-secret` อยู่แล้ว สามารถชี้ Argo CD Image Updater ไปใช้ Secret ตัวนั้นโดยตรงด้วย prefix **`pullsecret:`** ได้ 2 แบบ:
+
+1. **แบบปลอดภัยสุด (ไว้ใน namespace `argocd`):**
+   ```bash
+   # สร้าง docker-registry secret ใน namespace argocd
+   kubectl create secret docker-registry harbor-prd-secret \
+     --docker-server=10.5.3.56:8443 \
+     --docker-username='robot$cicd-unlimited' \
+     --docker-password='ybXtqTtJmcNjMnVFIPJvFmuCnAmGhP7s' \
+     -n argocd
+   ```
+   แล้วแก้ใน `argocd-image-updater-config` เป็น:
+   ```yaml
+   credentials: pullsecret:argocd/harbor-prd-secret
+   ```
+   *(หรือระบุราย App ใน `argocd/application.yaml` ด้วย `argocd-image-updater.argoproj.io/app.pull-secret: pullsecret:argocd/harbor-prd-secret`)*
+
+2. **แบบใช้ Secret ตัวเดียวกับ Pod ใน namespace `default` (`pullsecret:default/harbor-prd-secret`):**
+   เนื่องจากค่าเริ่มต้น `argocd-image-updater` มีสิทธิ์อ่าน Secret เฉพาะใน namespace `argocd` ต้องเพิ่ม Role เฉพาะเจาะจงให้อ่านเฉพาะ `harbor-prd-secret` ใน `default` ก่อน:
+   ```yaml
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: Role
+   metadata:
+     name: read-harbor-prd-secret
+     namespace: default
+   rules:
+     - apiGroups: [""]
+       resources: ["secrets"]
+       resourceNames: ["harbor-prd-secret"]
+       verbs: ["get"]
+   ---
+   apiVersion: rbac.authorization.k8s.io/v1
+   kind: RoleBinding
+   metadata:
+     name: argocd-image-updater-read-harbor-prd-secret
+     namespace: default
+   subjects:
+     - kind: ServiceAccount
+       name: argocd-image-updater
+       namespace: argocd
+   roleRef:
+     kind: Role
+     name: read-harbor-prd-secret
+     apiGroup: rbac.authorization.k8s.io
+   ```
+   จากนั้นใน `argocd-image-updater-config` เปลี่ยนเป็น `credentials: pullsecret:default/harbor-prd-secret` ได้เลย (แก้รหัสผ่านแค่ที่เดียวทั้ง Pod และ Image Updater!)
+
 ### ขั้นตอนที่ 5: สร้าง ImagePullSecret และลงทะเบียน Argo CD Application
 ```bash
 # 1. สร้าง ImagePullSecret ใน namespace default (สำหรับให้ K8s ดึง Image จาก Harbor PRD)
