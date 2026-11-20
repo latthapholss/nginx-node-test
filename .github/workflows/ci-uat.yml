@@ -3,10 +3,15 @@ name: "1. CI - Build and Push to Harbor UAT"
 on:
   push:
     branches: [ "main", "uat" ]  # 👈 รองรับการ push ทั้งบน main และ uat
+    paths-ignore:
+      - 'k8s/**'                 # 👈 กันไม่ให้การอัปเดต manifest เพื่อ Argo CD วนลูปรัน CI ซ้ำ
+      - 'argocd/**'
 
 jobs:
   build-and-push-uat:
     runs-on: self-hosted
+    permissions:
+      contents: write            # 👈 สิทธิ์สำหรับ commit อัปเดต image tag ใน k8s/deployment.yaml
     env:
       APP_NAME: nginx-node-test
       TAG: ${{ github.sha }}
@@ -29,6 +34,7 @@ jobs:
           RAW_VER="$(node -p "require('./package.json').version" 2>/dev/null || echo "1.0.0")"
           CLEAN_VER="${RAW_VER#v}"
           APP_VER="v${CLEAN_VER}"
+          echo "APP_VER=${APP_VER}" >> "$GITHUB_ENV"
           echo "🏷️ Version Tag: $APP_VER"
 
           UAT_BASE="${{ secrets.HARBOR_UAT_URL }}/${{ env.UAT_PROJECT }}/${{ env.APP_NAME }}"
@@ -47,3 +53,31 @@ jobs:
           docker push "$UAT_VER"
           docker push "$UAT_LATEST"
           echo "✅ Push เข้า Harbor UAT สำเร็จเรียบร้อย (Tags: latest, $APP_VER)!"
+
+      - name: 4. Update Image Tag in k8s/deployment.yaml for Argo CD (PRD)
+        if: github.ref == 'refs/heads/main'
+        run: |
+          echo "🔄 อัปเดต Image Tag ใน k8s/deployment.yaml เป็น ${APP_VER} เพื่อให้ Argo CD สั่ง Sync..."
+          node -e '
+            const fs = require("fs");
+            const file = "k8s/deployment.yaml";
+            const content = fs.readFileSync(file, "utf8");
+            const updated = content.replace(/(image:\s*\S+nginx-node-test:)[^\s]+/, "$1" + process.env.APP_VER);
+            if (content === updated) {
+              console.log("ℹ️ Tag ใน k8s/deployment.yaml เป็น " + process.env.APP_VER + " อยู่แล้ว");
+            } else {
+              fs.writeFileSync(file, updated);
+              console.log("✅ อัปเดต k8s/deployment.yaml เป็น " + process.env.APP_VER + " เรียบร้อย");
+            }
+          '
+
+          if git diff --quiet k8s/deployment.yaml; then
+            echo "ℹ️ ไม่มีการเปลี่ยนแปลงใน k8s/deployment.yaml ข้ามการ commit"
+          else
+            git config user.name "github-actions[bot]"
+            git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+            git add k8s/deployment.yaml
+            git commit -m "chore(gitops): bump PRD image tag to ${APP_VER} [skip ci]"
+            git push origin HEAD:main
+            echo "🚀 Push Manifest ใหม่เข้า main เรียบร้อย! Argo CD จะทำการ Auto-Sync ขึ้น Kubernetes ต่อไป"
+          fi
