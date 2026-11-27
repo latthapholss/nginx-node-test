@@ -3,6 +3,10 @@ kind: Deployment
 metadata:
   name: nginx-node-test
   namespace: default
+  annotations:
+    keel.sh/policy: all
+    keel.sh/trigger: poll
+    keel.sh/pollSchedule: "@every 1m"
   labels:
     app: nginx-node-test
 spec:
